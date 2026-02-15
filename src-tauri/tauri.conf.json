@@ -19,7 +19,7 @@
         "height": 500,
         "resizable": true,
         "center": true,
-        "url": "http://localhost:1420"
+        "url": "index.html"
       },
       {
         "label": "overlay",
@@ -34,7 +34,7 @@
         "transparent": true,
         "skipTaskbar": true,
         "focusable": false,
-        "url": "http://localhost:1420/overlay.html"
+        "url": "overlay.html"
       }
     ],
     "trayIcon": {
