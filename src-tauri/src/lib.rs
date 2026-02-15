@@ -348,28 +348,28 @@ pub fn run() {
             // Register global hotkey in Rust (no JS/webview focus change)
             let gs = app.global_shortcut();
             
-            let hotkey_shortcut: tauri_plugin_global_shortcut::Shortcut = hotkey_str.parse()
-                .map_err(|e| {
-                    log::error!("Invalid hotkey '{}': {:?}", hotkey_str, e);
-                    format!("Invalid hotkey configured: {}", e)
-                })?;
-            
-            gs.on_shortcut(hotkey_shortcut, |app, _shortcut, event| {
-                if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
-                    let app_handle = app.clone();
-                    tauri::async_runtime::spawn(async move {
-                        let state: tauri::State<'_, AppState> = app_handle.state();
-                        if let Err(e) = toggle_recording(app_handle.clone(), state).await {
-                            log::error!("Hotkey toggle failed: {}", e);
+            match hotkey_str.parse::<tauri_plugin_global_shortcut::Shortcut>() {
+                Ok(hotkey_shortcut) => {
+                    // Try to unregister first in case a previous instance left it registered
+                    let _ = gs.unregister(hotkey_shortcut);
+                    
+                    match gs.on_shortcut(hotkey_shortcut, |app, _shortcut, event| {
+                        if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
+                            let app_handle = app.clone();
+                            tauri::async_runtime::spawn(async move {
+                                let state: tauri::State<'_, AppState> = app_handle.state();
+                                if let Err(e) = toggle_recording(app_handle.clone(), state).await {
+                                    log::error!("Hotkey toggle failed: {}", e);
+                                }
+                            });
                         }
-                    });
+                    }) {
+                        Ok(_) => log::info!("Global hotkey '{}' registered", hotkey_str),
+                        Err(e) => log::warn!("Could not register hotkey '{}': {}. You can change it in settings.", hotkey_str, e),
+                    }
                 }
-            }).map_err(|e| {
-                log::error!("Failed to register global hotkey: {}", e);
-                format!("Failed to register hotkey: {}", e)
-            })?;
-            
-            log::info!("Global hotkey '{}' registered in Rust backend", hotkey_str);
+                Err(e) => log::warn!("Invalid hotkey '{}': {:?}. You can change it in settings.", hotkey_str, e),
+            }
             
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
